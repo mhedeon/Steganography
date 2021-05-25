@@ -157,6 +157,21 @@ void WavFile::readHeader(FILE **parFile)
 	
 }
 
+char static readHiddenByte(FILE **file)
+{
+	char byte = 0, temp = 0;
+
+	for (int i = 0; i < 8; i++)
+	{
+		temp = fgetc(*file);
+		fgetc(*file);
+		
+		byte |= ((temp & 0x1) << i);
+	}
+	
+	return byte;
+}
+
 int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 {
 	FILE* wfile, * tfile, * ofile;
@@ -181,8 +196,8 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 	fread(header, 44, 1, wfile);		// read WAV header
 	fwrite(header, 44, 1, ofile);		// write WAV header
 	
-	prepareHeader(childfile);
-	writeHeader(&wfile, &ofile);
+	// prepareHeader(childfile);
+	// writeHeader(&wfile, &ofile);
 
 	// main hiding/encoding process
 	while (!feof(tfile))
@@ -237,28 +252,15 @@ int WavFile::unhide(char* parentfile, char* txtfile)
 	}
 
 	FILE* bfile, * tfile;
-	char ch, bmpBuffer[8];
-	int i;
+	char ch = 0;
 	bfile = fopen(parentfile, "rb");
 	tfile = fopen(txtfile, "w+b");
 
 	fseek(bfile, 44, SEEK_SET);				//skip the BMP header part
-	ch = 0;
 
 	while (!feof(bfile))
 	{
-		// read the last bit from BMP file
-		ch = 0;
-		for (i = 0; i <= 7; i++) {
-			bmpBuffer[i] = fgetc(bfile);
-			fgetc(bfile);
-		}
-
-		for (i = 7; i >= 0; i--) {
-			ch += (bmpBuffer[i] & 1);
-			if (i != 0)
-				ch <<= 1;
-		}
+		ch = readHiddenByte(&bfile);
 
 		if (ch == EOF || ch == '*') {
 			break;
