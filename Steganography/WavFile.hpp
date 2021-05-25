@@ -1,13 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <stdbool.h>
 
-#include <wtypes.h>
-
-class WavFile {
-private:
-public:
-	// properties...
+struct s_wavHeader {
 	char ChunkID[4];
 	uint32_t ChunkSize;
 	char Format[4];
@@ -21,15 +17,26 @@ public:
 	uint16_t BitsPerSample;
 	char Subchunk2ID[4];
 	uint32_t Subchunk2Size;
+};
 
-	// ASCII stuffable character in bitmap...
-	long bmTotalStuffchar;
-	unsigned long wavFileSize;
+struct s_myHeader {
+	uint32_t fileSize; // in bytes
+	uint32_t nameSize; // in bytes
+	char *name;
+};
 
-	// methods
-	WavFile(const char* filename);										// constructor
-	int isFileExist(const char* filename);								// check file existence
-	int readHeader(const char* filename);									// read WAVE Header
+class WavFile {
+private:
+	struct s_wavHeader wavHeader = { 0 };
+	struct s_myHeader myHeader = { 0 };
+	uint32_t wavDataSize;
+
+public:
+	WavFile(const char* filename);
+	~WavFile();
+
+	bool isFileExist(const char* filename);								// check file existence
+	int readWavHeader(const char* filename);									// read WAVE Header
 	int printFileInfo();											// print header variables
 	int checkFilesForHiding(char* parentfile, char* childfile);		// check files
 	int hide(char* parentfile, char* childfile, char* outputfile); 	// hide into parent

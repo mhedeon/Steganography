@@ -5,39 +5,52 @@
 #define __WavFile
 #endif
 
-//checks for existence of file, returns 0 if ok, returns -1 on error
-int WavFile::isFileExist(const char* filename)
+//class contructor
+WavFile::WavFile(const char* filename)
 {
-	FILE* wavFilename;
-	wavFilename = fopen(filename, "rb");
-	if (wavFilename == NULL) {
-		throw("File doesn't exits or wrong Filename...\n");
-		exit(1);
-		return (-1);
+	if (isFileExist(filename))
+	{
+		readWavHeader(filename);
 	}
-	fclose(wavFilename);
-	return 0;
 }
 
-int WavFile::readHeader(const char* filename)
+WavFile::~WavFile()
 {
 
-	if (isFileExist(filename) == 0) {
+}
+
+//checks for existence of file, returns 0 if ok, returns -1 on error
+bool WavFile::isFileExist(const char* filename)
+{
+	FILE* wavFilename;
+
+	if ((wavFilename = fopen(filename, "rb")) == NULL) {
+		return false;
+	}
+	fclose(wavFilename);
+	
+	return true;
+}
+
+int WavFile::readWavHeader(const char* filename)
+{
+
+	if (isFileExist(filename)) {
 		FILE* wavFilename = fopen(filename, "rb");
 
-		fread((char*)&ChunkID, 4, 1, wavFilename);
-		fread((uint32_t*)&ChunkSize, 4, 1, wavFilename);
-		fread((char*)&Format, 4, 1, wavFilename);
-		fread((char*)&Subchunk1ID, 4, 1, wavFilename);
-		fread((uint32_t*)&Subchunk1Size, 4, 1, wavFilename);
-		fread((uint16_t*) & AudioFormat, 2, 1, wavFilename);
-		fread((uint16_t*) & NumChannels, 2, 1, wavFilename);
-		fread((uint32_t*)&SampleRate, 4, 1, wavFilename);
-		fread((uint32_t*)&ByteRate, 4, 1, wavFilename);
-		fread((uint16_t*)&BlockAlign, 2, 1, wavFilename);
-		fread((uint16_t*)&BitsPerSample, 2, 1, wavFilename);
-		fread((char*)&Subchunk2ID, 4, 1, wavFilename);
-		fread((uint32_t*)&Subchunk2Size, 4, 1, wavFilename);
+		fread((char*)&(wavHeader.ChunkID), 4, 1, wavFilename);
+		fread((uint32_t*)&(wavHeader.ChunkSize), 4, 1, wavFilename);
+		fread((char*)&(wavHeader.Format), 4, 1, wavFilename);
+		fread((char*)&(wavHeader.Subchunk1ID), 4, 1, wavFilename);
+		fread((uint32_t*)&(wavHeader.Subchunk1Size), 4, 1, wavFilename);
+		fread((uint16_t*)&(wavHeader.AudioFormat), 2, 1, wavFilename);
+		fread((uint16_t*)&(wavHeader.NumChannels), 2, 1, wavFilename);
+		fread((uint32_t*)&(wavHeader.SampleRate), 4, 1, wavFilename);
+		fread((uint32_t*)&(wavHeader.ByteRate), 4, 1, wavFilename);
+		fread((uint16_t*)&(wavHeader.BlockAlign), 2, 1, wavFilename);
+		fread((uint16_t*)&(wavHeader.BitsPerSample), 2, 1, wavFilename);
+		fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
+		fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
 		
 		fclose(wavFilename);
 		return 0;
@@ -45,30 +58,23 @@ int WavFile::readHeader(const char* filename)
 	return -1;
 }
 
-//class contructor
-WavFile::WavFile(const char* filename)
-{
-	if (isFileExist(filename) == 0)
-	{
-		readHeader(filename);
-	}
-}
+
 
 int WavFile::printFileInfo()
 {
-	cout << "RIFF             : " << ChunkID[0] << ChunkID[1] << ChunkID[2] << ChunkID[3] << endl;
-	cout << "Riff Chuck       : " << ChunkSize << endl;
-	cout << "Wave             : " << Format[0] << Format[1] << Format[2] << Format[3] << endl;
-	cout << "Fmt              : " << Subchunk1ID[0] << Subchunk1ID[1] << Subchunk1ID[2] << Subchunk1ID[3] << endl;
-	cout << "Fmt chunk        : " << Subchunk1Size << endl;
-	cout << "Mono Or Stero    : " << AudioFormat << endl;
-	cout << "Channel          : " << NumChannels << endl;
-	cout << "Sample Rate      : " << SampleRate << endl;
-	cout << "Bytes per sec    : " << ByteRate << endl;
-	cout << "Bytes Per Sample : " << BlockAlign << endl;
-	cout << "Bits per sample  : " << BitsPerSample << endl;
-	cout << "Data chuck       : " << Subchunk2ID[0] << Subchunk2ID[1] << Subchunk2ID[2] << Subchunk2ID[3] << endl;
-	cout << "Length of chunk  : " << Subchunk2Size << endl;
+	cout << "RIFF             : " << wavHeader.ChunkID[0] << wavHeader.ChunkID[1] << wavHeader.ChunkID[2] << wavHeader.ChunkID[3] << endl;
+	cout << "Riff Chuck       : " << wavHeader.ChunkSize << endl;
+	cout << "Format           : " << wavHeader.Format[0] << wavHeader.Format[1] << wavHeader.Format[2] << wavHeader.Format[3] << endl;
+	cout << "Fmt              : " << wavHeader.Subchunk1ID[0] << wavHeader.Subchunk1ID[1] << wavHeader.Subchunk1ID[2] << wavHeader.Subchunk1ID[3] << endl;
+	cout << "Fmt chunk        : " << wavHeader.Subchunk1Size << endl;
+	cout << "Audio format(PCM): " << wavHeader.AudioFormat << endl;
+	cout << "Channels         : " << wavHeader.NumChannels << endl;
+	cout << "Sample Rate      : " << wavHeader.SampleRate << endl;
+	cout << "Bytes per sec    : " << wavHeader.ByteRate << endl;
+	cout << "Bytes block      : " << wavHeader.BlockAlign << endl;
+	cout << "Bits per sample  : " << wavHeader.BitsPerSample << endl;
+	cout << "Data chuck       : " << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << endl;
+	cout << "Length of chunk  : " << wavHeader.Subchunk2Size << endl;
 
 	return 0;
 }
@@ -80,13 +86,13 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 
 	// check and Initialize files...
 	// read txt file and read wav file length...
-	if (isFileExist(parentfile) == -1)
+	if (!isFileExist(parentfile))
 	{
 		throw("WAV file doesn't exist");
 		return -1;
 	}
 
-	if (isFileExist(childfile) == -1)
+	if (!isFileExist(childfile))
 	{
 		throw("txt file doesn't exist");
 		return -1;
@@ -106,10 +112,10 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 		p++;
 	}
 
-	readHeader(parentfile);				// read wav header info...
+	readWavHeader(parentfile);				// read wav header info...
 
-	wavFileSize = p - 44;
-	if (t > wavFileSize)
+	wavDataSize = p - 44;
+	if (t > wavDataSize)
 	{
 		throw "TXT filesize is greater than WAVE file...";
 		return -1;
@@ -159,7 +165,7 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 			wavbuffer = fgetc(wfile);
 			fputc(wavbuffer, ofile);
 
-			wavFileSize-=2;
+			wavDataSize-=2;
 		}
 	}
 
@@ -172,11 +178,11 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 		fputc(wavbuffer, ofile);
 		wavbuffer = fgetc(wfile);
 		fputc(wavbuffer, ofile);
-		wavFileSize-=2;
+		wavDataSize-=2;
 	}
 
 	// write remaing wav bytes into the new file.
-	if (wavFileSize > 0)
+	if (wavDataSize > 0)
 	{
 		while (!feof(wfile)) {
 			fputc(fgetc(wfile), ofile);
@@ -193,7 +199,7 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 
 int WavFile::unhide(char* parentfile, char* txtfile)
 {
-	if (readHeader(parentfile) == -1) {
+	if (readWavHeader(parentfile) == -1) {
 		return -1;
 	}
 
