@@ -1,5 +1,6 @@
 #include "header.hpp"
 #include "WavFile.hpp"
+#include "myFile.hpp"
 
 // ImperialMarch60
 
@@ -9,6 +10,10 @@ int wavEncoderHandler(char*, char*, char*);
 int wavDecoderHandler(char*, char*);
 
 int main(int argc, char* argv[]) {
+	
+	cout << myFile::ifFileExist("data\\text.txt") << endl;
+	//cout << argv[2] << endl;
+
 
 	try {
 		const char* f1 = argv[1];
