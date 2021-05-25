@@ -157,15 +157,17 @@ void WavFile::readHeader(FILE **parFile)
 	
 }
 
-char static readHiddenByte(FILE **file)
+char WavFile::readHiddenByte(FILE **file)
 {
 	char byte = 0, temp = 0;
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 8; i++, temp = 0)
 	{
 		temp = fgetc(*file);
-		fgetc(*file);
-		
+		for (int skipBytes = 0; skipBytes < wavHeader.BitsPerSample / 8 - 1; skipBytes++)
+		{
+			fgetc(*file);
+		}
 		byte |= ((temp & 0x1) << i);
 	}
 	

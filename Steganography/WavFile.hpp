@@ -35,6 +35,7 @@ private:
 	struct s_myHeader myHeader = { 0 };
 	uint32_t wavDataSize;
 
+	char readHiddenByte(FILE **file);
 public:
 	WavFile(const char* filename);
 	~WavFile();
