@@ -1,5 +1,6 @@
 #include "header.hpp"
 #include "WavFile.hpp"
+#include "myFile.hpp"
 
 #ifndef __WavFile
 #define __WavFile
@@ -8,7 +9,7 @@
 //class contructor
 WavFile::WavFile(const char* filename)
 {
-	if (isFileExist(filename))
+	if (myFile::ifFileExist(filename))
 	{
 		readWavHeader(filename);
 	}
@@ -19,23 +20,10 @@ WavFile::~WavFile()
 
 }
 
-//checks for existence of file, returns 0 if ok, returns -1 on error
-bool WavFile::isFileExist(const char* filename)
-{
-	FILE* wavFilename;
-
-	if ((wavFilename = fopen(filename, "rb")) == NULL) {
-		return false;
-	}
-	fclose(wavFilename);
-	
-	return true;
-}
-
 int WavFile::readWavHeader(const char* filename)
 {
 
-	if (isFileExist(filename)) {
+	if (myFile::ifFileExist(filename)) {
 		FILE* wavFilename = fopen(filename, "rb");
 
 		fread((char*)&(wavHeader.ChunkID), 4, 1, wavFilename);
@@ -86,13 +74,13 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 
 	// check and Initialize files...
 	// read txt file and read wav file length...
-	if (!isFileExist(parentfile))
+	if (!myFile::ifFileExist(parentfile))
 	{
 		throw("WAV file doesn't exist");
 		return -1;
 	}
 
-	if (!isFileExist(childfile))
+	if (!myFile::ifFileExist(childfile))
 	{
 		throw("txt file doesn't exist");
 		return -1;
@@ -130,6 +118,45 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 	return 0;
 }
 
+void WavFile::prepareHeader(char* childfile)
+{
+	myFile temp(childfile, MODE_READ);
+	
+	myHeader.fileSize = temp.size;
+	myHeader.headerSize = sizeof(myHeader.fileSize);
+
+	std::cout << "fileSize: " << myHeader.fileSize << std::endl;
+}
+
+void WavFile::writeHeader(FILE **parFile, FILE **outFile)
+{
+	// temporary just to test enc/dec with header and size info
+	for (uint32_t i = 0; i < 4; i++)
+	{
+		std::cout << "xcvxcvxcv" << std::endl;
+		char *headerByte = (char *)&(myHeader.fileSize) + i;
+		char fileByte = 0;
+		for (int bit = 0; bit < 8; bit++)
+		{
+			std::cout << "ZCZCZCX" << std::endl;
+			fileByte = fgetc(*parFile);
+			fileByte &= 0xFE;				//FE, to make sure LSB is always zero
+			fileByte |= (char)((*headerByte >> bit) & 1);
+			fputc(fileByte, *outFile);
+
+			fileByte = fgetc(*parFile);
+			fputc(fileByte, *outFile);
+
+			wavDataSize-=2;
+		}
+	}
+}
+
+void WavFile::readHeader(FILE **parFile)
+{
+	
+}
+
 int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 {
 	FILE* wfile, * tfile, * ofile;
@@ -141,7 +168,9 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 	// check and Initialize parent & txt files...
 	if (checkFilesForHiding(parentfile, childfile) == -1)
 	{
+		std::cout << "sdfsdfsdfsd" << std::endl;
 		throw ("error!, initialization failed...");
+		
 		return -1;
 	}
 
@@ -151,6 +180,9 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 
 	fread(header, 44, 1, wfile);		// read WAV header
 	fwrite(header, 44, 1, ofile);		// write WAV header
+	
+	prepareHeader(childfile);
+	writeHeader(&wfile, &ofile);
 
 	// main hiding/encoding process
 	while (!feof(tfile))
@@ -162,6 +194,7 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 			wavbuffer &= 0xFE;				//FE, to make sure LSB is always zero
 			wavbuffer |= (char)((txtbuffer >> i) & 1);
 			fputc(wavbuffer, ofile);
+
 			wavbuffer = fgetc(wfile);
 			fputc(wavbuffer, ofile);
 

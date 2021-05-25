@@ -21,8 +21,12 @@ struct s_wavHeader {
 
 struct s_myHeader {
 	uint32_t fileSize; // in bytes
+	
+	/*  temporary not used
 	uint32_t nameSize; // in bytes
 	char *name;
+	*/
+	uint32_t headerSize;
 };
 
 class WavFile {
@@ -35,7 +39,12 @@ public:
 	WavFile(const char* filename);
 	~WavFile();
 
-	bool isFileExist(const char* filename);								// check file existence
+
+	void prepareHeader(char* childfile);
+	void writeHeader(FILE **parFile, FILE **outFile);
+	void readHeader(FILE **parFile);
+
+
 	int readWavHeader(const char* filename);									// read WAVE Header
 	int printFileInfo();											// print header variables
 	int checkFilesForHiding(char* parentfile, char* childfile);		// check files

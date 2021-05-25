@@ -13,13 +13,13 @@ enum Mode
 
 class myFile
 {
-private:
+public:
     char *name;
     char *path;
     FILE *file;
     uint32_t size;
     
-public:
+
     myFile(const char *filePath, Mode mode);
     ~myFile();
     

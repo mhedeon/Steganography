@@ -12,7 +12,7 @@ myFile::myFile(const char *filePath, Mode mode): name(0), path(0), file(0), size
         strcpy(path, filePath);
         
         // +1 position to avoid '/' at the start of fileName
-        name = strrchr(path, '/') + 1;
+        name = strrchr(path, '\\') + 1;
         
         if (mode == MODE_READ)
             file = fopen(path, "rb");

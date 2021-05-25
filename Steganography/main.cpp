@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 	//cout << argv[2] << endl;
 
 
-	try {
+	/*try {
 		const char* f1 = argv[1];
 
 		switch (argc)
@@ -72,7 +72,11 @@ int main(int argc, char* argv[]) {
 	{
 		cout << "Err : " << err << endl;
 		exit(1);
-	}
+	}*/
+	char a1[] = "data\\ImperialMarch60.wav";
+	char a2[] = "data\\text.txt";
+	char a3[] = "data\\qwe.wav";
+	wavEncoderHandler(a1, a2, a3);
 
 	return 0;
 }
