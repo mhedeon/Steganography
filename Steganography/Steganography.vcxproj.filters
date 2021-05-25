@@ -18,7 +18,7 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WawFile.cpp">
+    <ClCompile Include="WavFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -26,7 +26,7 @@
     <ClInclude Include="header.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WawFile.hpp">
+    <ClInclude Include="WavFile.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
