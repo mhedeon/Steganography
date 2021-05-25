@@ -133,12 +133,10 @@ void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 	// temporary just to test enc/dec with header and size info
 	for (uint32_t i = 0; i < 4; i++)
 	{
-		std::cout << "xcvxcvxcv" << std::endl;
 		char *headerByte = (char *)&(myHeader.fileSize) + i;
 		char fileByte = 0;
 		for (int bit = 0; bit < 8; bit++)
 		{
-			std::cout << "ZCZCZCX" << std::endl;
 			fileByte = fgetc(*parFile);
 			fileByte &= 0xFE;				//FE, to make sure LSB is always zero
 			fileByte |= (char)((*headerByte >> bit) & 1);
@@ -150,11 +148,6 @@ void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 			wavDataSize-=2;
 		}
 	}
-}
-
-void WavFile::readHeader(FILE **parFile)
-{
-	
 }
 
 char WavFile::readHiddenByte(FILE **file)
@@ -172,6 +165,17 @@ char WavFile::readHiddenByte(FILE **file)
 	}
 	
 	return byte;
+}
+
+void WavFile::readHeader(FILE **parFile)
+{
+	uint32_t temp = 0;
+	
+	for (int i = 0; i < 4; i++)
+	{
+		((char *)&(myHeader.fileSize))[i] = readHiddenByte(parFile);
+	}
+	std::cout << "myHeader.fileSize dec: " << myHeader.fileSize << std::endl;
 }
 
 int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
@@ -198,8 +202,8 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 	fread(header, 44, 1, wfile);		// read WAV header
 	fwrite(header, 44, 1, ofile);		// write WAV header
 	
-	// prepareHeader(childfile);
-	// writeHeader(&wfile, &ofile);
+	prepareHeader(childfile);
+	writeHeader(&wfile, &ofile);
 
 	// main hiding/encoding process
 	while (!feof(tfile))
@@ -220,16 +224,16 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 	}
 
 	// stuffing txt terminator indicator.
-	for (i = 0; i < 8; i++)
-	{
-		wavbuffer = fgetc(wfile);
-		wavbuffer &= 0xFE;
-		wavbuffer |= (char)((txtTerminatorIndicator >> i) & 1);
-		fputc(wavbuffer, ofile);
-		wavbuffer = fgetc(wfile);
-		fputc(wavbuffer, ofile);
-		wavDataSize-=2;
-	}
+	// for (i = 0; i < 8; i++)
+	// {
+	// 	wavbuffer = fgetc(wfile);
+	// 	wavbuffer &= 0xFE;
+	// 	wavbuffer |= (char)((txtTerminatorIndicator >> i) & 1);
+	// 	fputc(wavbuffer, ofile);
+	// 	wavbuffer = fgetc(wfile);
+	// 	fputc(wavbuffer, ofile);
+	// 	wavDataSize-=2;
+	// }
 
 	// write remaing wav bytes into the new file.
 	if (wavDataSize > 0)
@@ -260,16 +264,15 @@ int WavFile::unhide(char* parentfile, char* txtfile)
 
 	fseek(bfile, 44, SEEK_SET);				//skip the BMP header part
 
-	while (!feof(bfile))
+	readHeader(&bfile);
+
+	int i = 0;
+	while (!feof(bfile) && i < myHeader.fileSize)
 	{
 		ch = readHiddenByte(&bfile);
 
-		if (ch == EOF || ch == '*') {
-			break;
-		}
-		else {
-			fputc(ch, tfile);
-		}
+		fputc(ch, tfile);
+		i++;
 	}
 
 	fclose(bfile);
