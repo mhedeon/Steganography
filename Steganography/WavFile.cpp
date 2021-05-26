@@ -9,6 +9,9 @@
 //class contructor
 WavFile::WavFile(const char* filename)
 {
+	memset(&wavHeader, 0, sizeof(s_wavHeader));
+	memset(&myHeader, 0, sizeof(s_myHeader));
+
 	if (myFile::ifFileExist(filename))
 	{
 		readWavHeader(filename);
@@ -24,48 +27,43 @@ int WavFile::readWavHeader(const char* filename)
 {
 	int res = WAV_ERROR;
 
-	if (myFile::ifFileExist(filename)) {
-		FILE* wavFilename = fopen(filename, "rb");
+	FILE* wavFilename = fopen(filename, "rb");
 
-		fread((char*)&(wavHeader.ChunkID), 4, 1, wavFilename);
-		fread((uint32_t*)&(wavHeader.ChunkSize), 4, 1, wavFilename);
-		fread((char*)&(wavHeader.Format), 4, 1, wavFilename);
-		fread((char*)&(wavHeader.Subchunk1ID), 4, 1, wavFilename);
-		fread((uint32_t*)&(wavHeader.Subchunk1Size), 4, 1, wavFilename);
-		fread((uint16_t*)&(wavHeader.AudioFormat), 2, 1, wavFilename);
-		fread((uint16_t*)&(wavHeader.NumChannels), 2, 1, wavFilename);
-		fread((uint32_t*)&(wavHeader.SampleRate), 4, 1, wavFilename);
-		fread((uint32_t*)&(wavHeader.ByteRate), 4, 1, wavFilename);
-		fread((uint16_t*)&(wavHeader.BlockAlign), 2, 1, wavFilename);
-		fread((uint16_t*)&(wavHeader.BitsPerSample), 2, 1, wavFilename);
+	fread((char*)&(wavHeader.ChunkID), 4, 1, wavFilename);
+	fread((uint32_t*)&(wavHeader.ChunkSize), 4, 1, wavFilename);
+	fread((char*)&(wavHeader.Format), 4, 1, wavFilename);
+	fread((char*)&(wavHeader.Subchunk1ID), 4, 1, wavFilename);
+	fread((uint32_t*)&(wavHeader.Subchunk1Size), 4, 1, wavFilename);
+	fread((uint16_t*)&(wavHeader.AudioFormat), 2, 1, wavFilename);
+	fread((uint16_t*)&(wavHeader.NumChannels), 2, 1, wavFilename);
+	fread((uint32_t*)&(wavHeader.SampleRate), 4, 1, wavFilename);
+	fread((uint32_t*)&(wavHeader.ByteRate), 4, 1, wavFilename);
+	fread((uint16_t*)&(wavHeader.BlockAlign), 2, 1, wavFilename);
+	fread((uint16_t*)&(wavHeader.BitsPerSample), 2, 1, wavFilename);
+	fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
+	fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
+	if (!strncmp(wavHeader.Subchunk2ID, "LIST", 4))
+	{
+		wavHeader.listSize = wavHeader.Subchunk2Size;
+		fseek(wavFilename, wavHeader.listSize, SEEK_CUR);
+		wavHeader.listSize += 8; //adding lost SubChunkID and SubChunkSize size
+
 		fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
 		fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
-		if (!strncmp(wavHeader.Subchunk2ID, "LIST", 4))
+		if (strncmp(wavHeader.Subchunk2ID, "data", 4))
 		{
-			std::cout << wavHeader.Subchunk2ID << std::endl;
-			std::cout << wavHeader.Subchunk2Size << std::endl;
-			wavHeader.listSize = wavHeader.Subchunk2Size;
-			std::cout << wavHeader.listSize << std::endl;
-			fseek(wavFilename, wavHeader.listSize, SEEK_CUR);
-			wavHeader.listSize += 8; //adding lost SubChunkID and SubChunkSize size
-			std::cout << wavHeader.listSize << std::endl;
-
-			fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
-			fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
-			if (strncmp(wavHeader.Subchunk2ID, "data", 4))
-			{
-				wavHeader.Subchunk2Size = 0;
-				std::cout << __FUNCTION__ << "(): " << __LINE__ << ": " << "Unknown DATA subchunk(" << wavHeader.Subchunk2ID << ")." << std::endl;
-			}
+			wavHeader.Subchunk2Size = 0;
+			std::cout << __FUNCTION__ << "(): " << __LINE__ << ": " << "Unknown DATA subchunk(" << wavHeader.Subchunk2ID << ")." << std::endl;
+			
+			res = WAV_ERROR;
 		}
-		
-		fclose(wavFilename);
-		return 0;
 	}
-	return -1;
+
+	res = WAV_SUCCESS;
+	fclose(wavFilename);
+
+	return res; 
 }
-
-
 
 int WavFile::printFileInfo()
 {
@@ -116,6 +114,7 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 		fgetc(tfile);
 		t++;
 	}
+	fclose(tfile);
 
 	pfile = fopen(parentfile, "rb");
 	while (!feof(pfile))					// read the length of wav file...
@@ -123,8 +122,7 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 		fgetc(pfile);
 		p++;
 	}
-
-	readWavHeader(parentfile);				// read wav header info...
+	fclose(pfile);
 
 	wavDataSize = p - WAV_HEADER_SIZE;
 	if (t > wavDataSize)
@@ -132,12 +130,6 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 		throw "TXT filesize is greater than WAVE file...";
 		return -1;
 	}
-
-	//if(waChannel != 1)
-//		{
-//			throw ("Only mono WAVE files can be used...");
-//			return -1;
-//		}
 
 	return 0;
 }
@@ -160,6 +152,18 @@ void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 		char *headerByte = (char *)&(myHeader.fileSize) + i;
 		hideByte(parFile, outFile, *headerByte);
 	}
+}
+
+void WavFile::readHeader(FILE **parFile)
+{
+	uint32_t temp = 0;
+	
+	for (int i = 0; i < 4; i++)
+	{
+		((char *)&(myHeader.fileSize))[i] = readHiddenByte(parFile);
+	}
+
+	std::cout << "myHeader.fileSize dec: " << myHeader.fileSize << std::endl;
 }
 
 char WavFile::readHiddenByte(FILE **file)
@@ -186,109 +190,84 @@ void WavFile::hideByte(FILE **fileContainer, FILE **fileResult, char byte)
 	for (int bit = 0; bit < 8; bit++)
 	{
 		fileByte = fgetc(*fileContainer);
-		fileByte &= 0xFE;				//FE, to make sure LSB is always zero
-		fileByte |= (char)((byte >> bit) & 1);
+		fileByte = (fileByte & 0xFE) | ((char)((byte >> bit) & 1));
 		fputc(fileByte, *fileResult);
 
 		for (int skipBytes = 0; skipBytes < wavHeader.BitsPerSample / 8 - 1; skipBytes++)
 		{
 			fputc(fgetc(*fileContainer), *fileResult);
-			wavDataSize-=1;
 		}
-
-		wavDataSize-=1;
 	}
 }
 
-void WavFile::readHeader(FILE **parFile)
+int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePath)
 {
-	uint32_t temp = 0;
-	
-	for (int i = 0; i < 4; i++)
-	{
-		((char *)&(myHeader.fileSize))[i] = readHiddenByte(parFile);
-	}
-	std::cout << "myHeader.fileSize dec: " << myHeader.fileSize << std::endl;
-}
-
-int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
-{
-	FILE* wfile, * tfile, * ofile;
+	FILE *contFile = NULL, *binFile = NULL, *outFile = NULL;
 	unsigned char header[WAV_HEADER_SIZE];
 
 	// check and Initialize parent & txt files...
-	if (checkFilesForHiding(parentfile, childfile) == -1)
+	if (checkFilesForHiding(contFilePath, binFilePath) == -1)
 	{
 		throw ("error!, initialization failed...");
-		
 		return -1;
 	}
 
-	wfile = fopen(parentfile, "rb");
-	tfile = fopen(childfile, "rb");
-	ofile = fopen(outputfile, "w+b");
+	contFile = fopen(contFilePath, "rb");
+	binFile = fopen(binFilePath, "rb");
+	outFile = fopen(outFilePath, "w+b");
 
-	fread(header, WAV_HEADER_SIZE, 1, wfile);		// read WAV header
-	fwrite(header, WAV_HEADER_SIZE, 1, ofile);		// write WAV header
+	fread(header, WAV_HEADER_SIZE, 1, contFile);		// read WAV header
+	fwrite(header, WAV_HEADER_SIZE, 1, outFile);		// write WAV header
 	
 	//for case of LIST presence. loop here, bcs I don't know length of LIST chunks
 	for (uint32_t i = 0; i < wavHeader.listSize; i++)
 	{
-		fputc(fgetc(wfile), ofile);
-		wavDataSize-=1;
+		fputc(fgetc(contFile), outFile);
 	}
-	
-	prepareHeader(childfile);
-	writeHeader(&wfile, &ofile);
 
-	// main hiding/encoding process
-	while (!feof(tfile))
+	prepareHeader(binFilePath);
+	writeHeader(&contFile, &outFile);
+
+	// main hiding process
+	while (!feof(binFile))
 	{
-		hideByte(&wfile, &ofile, fgetc(tfile));
+		hideByte(&contFile, &outFile, fgetc(binFile));
 	}
 
 	// write remaing wav bytes into the new file.
-	if (wavDataSize > 0)
+	while (!feof(contFile))
 	{
-		while (!feof(wfile)) {
-			fputc(fgetc(wfile), ofile);
-		}
+		fputc(fgetc(contFile), outFile);
 	}
 
 	// close all file handlers
-	fclose(wfile);
-	fclose(tfile);
-	fclose(ofile);
+	fclose(contFile);
+	fclose(binFile);
+	fclose(outFile);
 
 	return 0;
 }
 
-int WavFile::unhide(char* parentfile, char* txtfile)
+int WavFile::decryptFile(char* encFilePath, char* txtfile)
 {
-	if (readWavHeader(parentfile) == -1) {
-		return -1;
-	}
+	FILE *encFile = NULL, *tfile = NULL;
 
-	FILE* bfile, * tfile;
-	char ch = 0;
-	bfile = fopen(parentfile, "rb");
+	encFile = fopen(encFilePath, "rb");
 	tfile = fopen(txtfile, "w+b");
 
 	// skip WAV header
-	fseek(bfile, WAV_HEADER_SIZE + wavHeader.listSize, SEEK_SET);
+	fseek(encFile, WAV_HEADER_SIZE + wavHeader.listSize, SEEK_SET);
 
-	readHeader(&bfile);
+	readHeader(&encFile);
 
-	int i = 0;
-	while (!feof(bfile) && i < myHeader.fileSize)
+	uint32_t i = 0;
+	while (!feof(encFile) && i < myHeader.fileSize)
 	{
-		ch = readHiddenByte(&bfile);
-
-		fputc(ch, tfile);
+		fputc(readHiddenByte(&encFile), tfile);
 		i++;
 	}
 
-	fclose(bfile);
+	fclose(encFile);
 	fclose(tfile);
 	return 0;
 }

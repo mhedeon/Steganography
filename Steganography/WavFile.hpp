@@ -57,6 +57,6 @@ public:
 	int readWavHeader(const char* filename);									// read WAVE Header
 	int printFileInfo();											// print header variables
 	int checkFilesForHiding(char* parentfile, char* childfile);		// check files
-	int hide(char* parentfile, char* childfile, char* outputfile); 	// hide into parent
-	int unhide(char* parentfile, char* txtfile);					// unhide txt
+	int encryptFile(char* parentfile, char* childfile, char* outputfile);
+	int decryptFile(char* encFilePath, char* txtfile);
 };

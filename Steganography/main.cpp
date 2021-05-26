@@ -89,7 +89,7 @@ int wavInfoHandler(char* parentFile)
 int wavEncoderHandler(char* parentfile, char* childfile, char* outfile)
 {
 	WavFile wa(parentfile);
-	if (wa.hide(parentfile, childfile, outfile) == -1)
+	if (wa.encryptFile(parentfile, childfile, outfile) == -1)
 		return -1;
 
 	cout << "encoding done" << endl;
@@ -99,7 +99,7 @@ int wavEncoderHandler(char* parentfile, char* childfile, char* outfile)
 int wavDecoderHandler(char* parentfile, char* outfile)
 {
 	WavFile wa(parentfile);
-	if (wa.unhide(parentfile, outfile) == -1)
+	if (wa.decryptFile(parentfile, outfile) == -1)
 		return -1;
 	cout << "decoding done" << endl;
 	return 0;

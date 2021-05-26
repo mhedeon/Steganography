@@ -11,7 +11,7 @@ myFile::myFile(const char *filePath, Mode mode): name(0), path(0), file(0), size
         path = (char *)malloc(sizeof(char) * (strlen(filePath) + 1));
         strcpy(path, filePath);
         
-        // +1 position to avoid '/' at the start of fileName
+        // +1 position to avoid '\' at the start of fileName
         name = strrchr(path, '\\') + 1;
         
         if (mode == MODE_READ)
