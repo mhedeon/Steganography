@@ -134,19 +134,7 @@ void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 	for (uint32_t i = 0; i < 4; i++)
 	{
 		char *headerByte = (char *)&(myHeader.fileSize) + i;
-		char fileByte = 0;
-		for (int bit = 0; bit < 8; bit++)
-		{
-			fileByte = fgetc(*parFile);
-			fileByte &= 0xFE;				//FE, to make sure LSB is always zero
-			fileByte |= (char)((*headerByte >> bit) & 1);
-			fputc(fileByte, *outFile);
-
-			fileByte = fgetc(*parFile);
-			fputc(fileByte, *outFile);
-
-			wavDataSize-=2;
-		}
+		hideByte(parFile, outFile, *headerByte);
 	}
 }
 
@@ -157,14 +145,35 @@ char WavFile::readHiddenByte(FILE **file)
 	for (int i = 0; i < 8; i++, temp = 0)
 	{
 		temp = fgetc(*file);
+		byte |= ((temp & 0x1) << i);
+
 		for (int skipBytes = 0; skipBytes < wavHeader.BitsPerSample / 8 - 1; skipBytes++)
 		{
 			fgetc(*file);
 		}
-		byte |= ((temp & 0x1) << i);
 	}
 	
 	return byte;
+}
+
+void WavFile::hideByte(FILE **fileContainer, FILE **fileResult, char byte)
+{
+	char fileByte = 0;
+	for (int bit = 0; bit < 8; bit++)
+	{
+		fileByte = fgetc(*fileContainer);
+		fileByte &= 0xFE;				//FE, to make sure LSB is always zero
+		fileByte |= (char)((byte >> bit) & 1);
+		fputc(fileByte, *fileResult);
+
+		for (int skipBytes = 0; skipBytes < wavHeader.BitsPerSample / 8 - 1; skipBytes++)
+		{
+			fputc(fgetc(*fileContainer), *fileResult);
+			wavDataSize-=1;
+		}
+
+		wavDataSize-=1;
+	}
 }
 
 void WavFile::readHeader(FILE **parFile)
@@ -182,14 +191,10 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 {
 	FILE* wfile, * tfile, * ofile;
 	unsigned char header[44];
-	char wavbuffer, txtbuffer;
-	int i;
-	char txtTerminatorIndicator = '*';
 
 	// check and Initialize parent & txt files...
 	if (checkFilesForHiding(parentfile, childfile) == -1)
 	{
-		std::cout << "sdfsdfsdfsd" << std::endl;
 		throw ("error!, initialization failed...");
 		
 		return -1;
@@ -208,32 +213,8 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 	// main hiding/encoding process
 	while (!feof(tfile))
 	{
-		txtbuffer = fgetc(tfile);
-		for (i = 0; i < 8; i++)
-		{
-			wavbuffer = fgetc(wfile);
-			wavbuffer &= 0xFE;				//FE, to make sure LSB is always zero
-			wavbuffer |= (char)((txtbuffer >> i) & 1);
-			fputc(wavbuffer, ofile);
-
-			wavbuffer = fgetc(wfile);
-			fputc(wavbuffer, ofile);
-
-			wavDataSize-=2;
-		}
+		hideByte(&wfile, &ofile, fgetc(tfile));
 	}
-
-	// stuffing txt terminator indicator.
-	// for (i = 0; i < 8; i++)
-	// {
-	// 	wavbuffer = fgetc(wfile);
-	// 	wavbuffer &= 0xFE;
-	// 	wavbuffer |= (char)((txtTerminatorIndicator >> i) & 1);
-	// 	fputc(wavbuffer, ofile);
-	// 	wavbuffer = fgetc(wfile);
-	// 	fputc(wavbuffer, ofile);
-	// 	wavDataSize-=2;
-	// }
 
 	// write remaing wav bytes into the new file.
 	if (wavDataSize > 0)

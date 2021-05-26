@@ -33,9 +33,12 @@ class WavFile {
 private:
 	struct s_wavHeader wavHeader = { 0 };
 	struct s_myHeader myHeader = { 0 };
+	
+	//to be deleted
 	uint32_t wavDataSize;
 
 	char readHiddenByte(FILE **file);
+	void hideByte(FILE **fileContainer, FILE **fileResult, char byte);
 public:
 	WavFile(const char* filename);
 	~WavFile();
