@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <stdbool.h>
 
+#define WAV_SUCCESS 0
+#define WAV_ERROR 1
+#define WAV_HEADER_SIZE 44
+
 struct s_wavHeader {
 	char ChunkID[4];
 	uint32_t ChunkSize;
@@ -15,6 +19,7 @@ struct s_wavHeader {
 	uint32_t ByteRate;
 	uint16_t BlockAlign;
 	uint16_t BitsPerSample;
+	uint32_t listSize; //if it present in header - add +8 bytes to skip whole LIST subchunk
 	char Subchunk2ID[4];
 	uint32_t Subchunk2Size;
 };

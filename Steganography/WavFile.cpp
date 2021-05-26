@@ -22,6 +22,7 @@ WavFile::~WavFile()
 
 int WavFile::readWavHeader(const char* filename)
 {
+	int res = WAV_ERROR;
 
 	if (myFile::ifFileExist(filename)) {
 		FILE* wavFilename = fopen(filename, "rb");
@@ -39,6 +40,24 @@ int WavFile::readWavHeader(const char* filename)
 		fread((uint16_t*)&(wavHeader.BitsPerSample), 2, 1, wavFilename);
 		fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
 		fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
+		if (!strncmp(wavHeader.Subchunk2ID, "LIST", 4))
+		{
+			std::cout << wavHeader.Subchunk2ID << std::endl;
+			std::cout << wavHeader.Subchunk2Size << std::endl;
+			wavHeader.listSize = wavHeader.Subchunk2Size;
+			std::cout << wavHeader.listSize << std::endl;
+			fseek(wavFilename, wavHeader.listSize, SEEK_CUR);
+			wavHeader.listSize += 8; //adding lost SubChunkID and SubChunkSize size
+			std::cout << wavHeader.listSize << std::endl;
+
+			fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
+			fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
+			if (strncmp(wavHeader.Subchunk2ID, "data", 4))
+			{
+				wavHeader.Subchunk2Size = 0;
+				std::cout << __FUNCTION__ << "(): " << __LINE__ << ": " << "Unknown DATA subchunk(" << wavHeader.Subchunk2ID << ")." << std::endl;
+			}
+		}
 		
 		fclose(wavFilename);
 		return 0;
@@ -61,8 +80,13 @@ int WavFile::printFileInfo()
 	cout << "Bytes per sec    : " << wavHeader.ByteRate << endl;
 	cout << "Bytes block      : " << wavHeader.BlockAlign << endl;
 	cout << "Bits per sample  : " << wavHeader.BitsPerSample << endl;
+	if (!!wavHeader.listSize)
+	{
+		cout << "List chunk       : LIST" << std::endl;
+		cout << "Chunk size       : " << wavHeader.listSize << std::endl;
+	}
 	cout << "Data chuck       : " << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << endl;
-	cout << "Length of chunk  : " << wavHeader.Subchunk2Size << endl;
+	cout << "Chunk size       : " << wavHeader.Subchunk2Size << endl;
 
 	return 0;
 }
@@ -102,7 +126,7 @@ int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
 
 	readWavHeader(parentfile);				// read wav header info...
 
-	wavDataSize = p - 44;
+	wavDataSize = p - WAV_HEADER_SIZE;
 	if (t > wavDataSize)
 	{
 		throw "TXT filesize is greater than WAVE file...";
@@ -190,7 +214,7 @@ void WavFile::readHeader(FILE **parFile)
 int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 {
 	FILE* wfile, * tfile, * ofile;
-	unsigned char header[44];
+	unsigned char header[WAV_HEADER_SIZE];
 
 	// check and Initialize parent & txt files...
 	if (checkFilesForHiding(parentfile, childfile) == -1)
@@ -204,8 +228,15 @@ int WavFile::hide(char* parentfile, char* childfile, char* outputfile)
 	tfile = fopen(childfile, "rb");
 	ofile = fopen(outputfile, "w+b");
 
-	fread(header, 44, 1, wfile);		// read WAV header
-	fwrite(header, 44, 1, ofile);		// write WAV header
+	fread(header, WAV_HEADER_SIZE, 1, wfile);		// read WAV header
+	fwrite(header, WAV_HEADER_SIZE, 1, ofile);		// write WAV header
+	
+	//for case of LIST presence. loop here, bcs I don't know length of LIST chunks
+	for (uint32_t i = 0; i < wavHeader.listSize; i++)
+	{
+		fputc(fgetc(wfile), ofile);
+		wavDataSize-=1;
+	}
 	
 	prepareHeader(childfile);
 	writeHeader(&wfile, &ofile);
@@ -243,7 +274,8 @@ int WavFile::unhide(char* parentfile, char* txtfile)
 	bfile = fopen(parentfile, "rb");
 	tfile = fopen(txtfile, "w+b");
 
-	fseek(bfile, 44, SEEK_SET);				//skip the BMP header part
+	// skip WAV header
+	fseek(bfile, WAV_HEADER_SIZE + wavHeader.listSize, SEEK_SET);
 
 	readHeader(&bfile);
 
