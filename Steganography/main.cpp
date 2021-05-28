@@ -4,103 +4,109 @@
 
 // ImperialMarch60
 
-
-int wavInfoHandler(char*);
-int wavEncoderHandler(char*, char*, char*);
-int wavDecoderHandler(char*, char*);
+void usage(void);
+int wavInfoHandler(char *);
+int wavEncoderHandler(char *, char *);
+int wavEncoderHandler(char *, char *, char *);
+int wavDecoderHandler(char *);
 
 int main(int argc, char* argv[]) {
-	
-	cout << myFile::ifFileExist("data\\text.txt") << endl;
-	//cout << argv[2] << endl;
 
-
-	try {
-		const char* f1 = argv[1];
-
-		switch (argc)
-		{
-		case 1:				//single argument...
-		case 2:
-			cout << "usage : " << endl;
-			cout << "wav -options " << endl;
-			cout << "Options:" << endl;
-			cout << "-i    : detailed help informations" << endl;
-			cout << "-e    : hide into wav file" << endl;
-			cout << "-d    : unhide from wav file" << endl;
-			cout << "example: " << endl;
-			cout << "wav -i file.wav" << endl;
-			cout << "wav -d input.wav output.txt" << endl;
-			cout << "wav -e input.wav input.txt output.wav" << endl;
-			exit(0);
-			break;
-
-		case 3:
-			if (strcmp(f1, "-i") == 0) {
-				wavInfoHandler(argv[2]);
-			}
-			else {
-				cout << "example: " << endl;
-				cout << "wav -i file.wav" << endl;
-				exit(0);
-			}
-			break;
-
-		case 4:
-			if (strcmp(f1, "-d") == 0) {
-				wavDecoderHandler(argv[2], argv[3]);
-			}
-			else {
-				cout << "example: " << endl;
-				cout << "wav -d input.wav output.txt" << endl;
-				exit(0);
-			}
-			break;
-		case 5:
-			if (strcmp(f1, "-e") == 0) {
-				wavEncoderHandler(argv[2], argv[3], argv[4]);
-			}
-			else {
-				cout << "example: " << endl;
-				cout << "wav -e input.wav input.txt output.wav" << endl;
-				exit(0);
-			}
-			break;
-		}
-	}
-	catch (char* err)
+	switch (argc)
 	{
-		cout << "Err : " << err << endl;
-		exit(1);
+	case 1:
+	case 2:
+		usage();
+		// exit(0);
+		break;
+
+	case 3:
+		if (strcmp(argv[1], "-i") == 0)
+		{
+			wavInfoHandler(argv[2]);
+		}
+		else if (strcmp(argv[1], "-d") == 0)
+		{
+			wavDecoderHandler(argv[2]);
+		}
+		else
+		{
+			usage();
+		}
+		break;
+
+	case 4:
+		if (strcmp(argv[1], "-e") == 0)
+		{
+			wavEncoderHandler(argv[2], argv[3]);
+		}
+		else
+		{
+			usage();
+		}
+		break;
+	case 5:
+		if (strcmp(argv[1], "-e") == 0)
+		{
+			wavEncoderHandler(argv[2], argv[3], argv[4]);
+		}
+		else
+		{
+			usage();
+		}
+		break;
+	default:
+		usage();
 	}
-	
 
 	return 0;
 }
 
-//function definition
-int wavInfoHandler(char* parentFile)
+void usage(void)
 {
-	WavFile wa(parentFile);
-	wa.printFileInfo();
+	cout << "usage  : wav -<option> <argumets>\n" <<
+			"Options:\n" <<
+			"-i     : wav file's information\n" <<
+			"-e     : hide binary file into wav file\n" <<
+			"-d     : unhide binary file from wav file\n" <<
+			"Example: \n" <<
+			"wav -i <wav_file>\n" <<
+			"wav -e <input_wav_file> <input_binary_file> <output_wav_file(optional)>\n" <<
+			"wav -d <input_wav_file>\n" <<
+	endl;
+}
+
+//function definition
+int wavInfoHandler(char* wavFilePath)
+{
+	WavFile wavFile(wavFilePath);
+
+	wavFile.printFileInfo();
+
 	return 0;
 };
 
-int wavEncoderHandler(char* parentfile, char* childfile, char* outfile)
+int wavEncoderHandler(char *wavFilePath, char *wavBinaryPath)
 {
-	WavFile wa(parentfile);
-	if (wa.encryptFile(parentfile, childfile, outfile) == -1)
+	return wavEncoderHandler(wavFilePath, wavBinaryPath, (char *)"output_file.wav");
+}
+
+int wavEncoderHandler(char* wavFilePath, char* wavBinaryPath, char* outFilePath)
+{
+	WavFile wavFile(wavFilePath);
+	if (wavFile.encryptFile(wavFilePath, wavBinaryPath, outFilePath) == -1)
 		return -1;
 
 	cout << "encoding done" << endl;
 	return 0;
 };
 
-int wavDecoderHandler(char* parentfile, char* outfile)
+int wavDecoderHandler(char* wavFilePath)
 {
-	WavFile wa(parentfile);
-	if (wa.decryptFile(parentfile, outfile) == -1)
+	WavFile wavFile(wavFilePath);
+	if (wavFile.decryptFile(wavFilePath) == -1)
 		return -1;
+
 	cout << "decoding done" << endl;
 	return 0;
 };

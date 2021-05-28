@@ -26,11 +26,9 @@ struct s_wavHeader {
 
 struct s_myHeader {
 	uint32_t fileSize; // in bytes
-	
-	/*  temporary not used
 	uint32_t nameSize; // in bytes
 	char *name;
-	*/
+
 	uint32_t headerSize;
 };
 
@@ -58,5 +56,5 @@ public:
 	int printFileInfo();											// print header variables
 	int checkFilesForHiding(char* parentfile, char* childfile);		// check files
 	int encryptFile(char* parentfile, char* childfile, char* outputfile);
-	int decryptFile(char* encFilePath, char* txtfile);
+	int decryptFile(char* encFilePath);
 };

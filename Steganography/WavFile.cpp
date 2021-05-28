@@ -20,7 +20,7 @@ WavFile::WavFile(const char* filename)
 
 WavFile::~WavFile()
 {
-
+	free(myHeader.name);
 }
 
 int WavFile::readWavHeader(const char* filename)
@@ -139,7 +139,14 @@ void WavFile::prepareHeader(char* childfile)
 	myFile temp(childfile, MODE_READ);
 	
 	myHeader.fileSize = temp.size;
-	myHeader.headerSize = sizeof(myHeader.fileSize);
+	myHeader.nameSize = strlen(temp.name) + 1;
+	std::cout << __FUNCTION__ << "(): " << myHeader.nameSize << "|" << std::endl;
+	myHeader.name = (char *)malloc(myHeader.nameSize);
+	memset(myHeader.name, 0, myHeader.nameSize);
+	strcpy(myHeader.name, temp.name);
+	std::cout << "|" << myHeader.name << "|" << std::endl;
+
+	// myHeader.headerSize = sizeof(myHeader.fileSize);
 
 	std::cout << "fileSize: " << myHeader.fileSize << std::endl;
 }
@@ -147,10 +154,20 @@ void WavFile::prepareHeader(char* childfile)
 void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 {
 	// temporary just to test enc/dec with header and size info
-	for (uint32_t i = 0; i < 4; i++)
+	for (uint32_t i = 0; i < sizeof(uint32_t); i++)
 	{
 		char *headerByte = (char *)&(myHeader.fileSize) + i;
 		hideByte(parFile, outFile, *headerByte);
+	}
+	for (uint32_t i = 0; i < sizeof(uint32_t); i++)
+	{
+		char *headerByte = (char *)&(myHeader.nameSize) + i;
+		hideByte(parFile, outFile, *headerByte);
+	}
+
+	for (uint32_t i = 0; i < myHeader.nameSize; i++)
+	{
+		hideByte(parFile, outFile, myHeader.name[i]);
 	}
 }
 
@@ -158,10 +175,24 @@ void WavFile::readHeader(FILE **parFile)
 {
 	uint32_t temp = 0;
 	
-	for (int i = 0; i < 4; i++)
+	for (uint32_t i = 0; i < sizeof(uint32_t); i++)
 	{
 		((char *)&(myHeader.fileSize))[i] = readHiddenByte(parFile);
 	}
+	for (uint32_t i = 0; i < sizeof(uint32_t); i++)
+	{
+		((char *)&(myHeader.nameSize))[i] = readHiddenByte(parFile);
+	}
+	
+	std::cout << __FUNCTION__ << "(): " << myHeader.nameSize << "|" << std::endl;
+
+	myHeader.name = (char *)malloc(myHeader.nameSize);
+	memset(myHeader.name, 0, myHeader.nameSize);
+	for (uint32_t i = 0; i < myHeader.nameSize; i++)
+	{
+		myHeader.name[i] = readHiddenByte(parFile);
+	}
+	std::cout << "|" << myHeader.name << "|" << std::endl;
 
 	std::cout << "myHeader.fileSize dec: " << myHeader.fileSize << std::endl;
 }
@@ -248,17 +279,17 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 	return 0;
 }
 
-int WavFile::decryptFile(char* encFilePath, char* txtfile)
+int WavFile::decryptFile(char* encFilePath)
 {
 	FILE *encFile = NULL, *tfile = NULL;
 
 	encFile = fopen(encFilePath, "rb");
-	tfile = fopen(txtfile, "w+b");
 
 	// skip WAV header
 	fseek(encFile, WAV_HEADER_SIZE + wavHeader.listSize, SEEK_SET);
 
 	readHeader(&encFile);
+	tfile = fopen(myHeader.name, "w+b");
 
 	uint32_t i = 0;
 	while (!feof(encFile) && i < myHeader.fileSize)
