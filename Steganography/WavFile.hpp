@@ -29,6 +29,9 @@ struct s_myHeader {
 	uint32_t nameSize; // in bytes
 	char *name;
 
+	// Doesn't write into file.
+	// Need just for calculates while hiding.
+	// (sizeof(fileSize) + sizeof(nameSize) + nameSize)
 	uint32_t headerSize;
 };
 
@@ -37,24 +40,23 @@ private:
 	struct s_wavHeader wavHeader = { 0 };
 	struct s_myHeader myHeader = { 0 };
 	
+	bool internalError;
+	
 	//to be deleted
 	uint32_t wavDataSize;
 
 	char readHiddenByte(FILE **file);
 	void hideByte(FILE **fileContainer, FILE **fileResult, char byte);
+	void prepareHeader(char* childfile);
+	void writeHeader(FILE **parFile, FILE **outFile);
+	void readHeader(FILE **parFile);
+	int readWavHeader(const char* filename);									// read WAVE Header
+	int checkFilesForHiding(char* parentfile, char* childfile);		// check files
 public:
 	WavFile(const char* filename);
 	~WavFile();
 
-
-	void prepareHeader(char* childfile);
-	void writeHeader(FILE **parFile, FILE **outFile);
-	void readHeader(FILE **parFile);
-
-
-	int readWavHeader(const char* filename);									// read WAVE Header
-	int printFileInfo();											// print header variables
-	int checkFilesForHiding(char* parentfile, char* childfile);		// check files
+	void printFileInfo();											// print header variables
 	int encryptFile(char* parentfile, char* childfile, char* outputfile);
 	int decryptFile(char* encFilePath);
 };

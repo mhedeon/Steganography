@@ -10,7 +10,10 @@ int wavEncoderHandler(char *, char *, char *);
 int wavDecoderHandler(char *);
 
 int main(int argc, char* argv[]) {
-
+	// myFile q((char *)"data\\Polishchuk_magistr.pdf", MODE_READ);
+	// std::cout << q.getPath() << std::endl << q.getName() << std::endl << q.getExt() << std::endl;
+	// myFile w((char *)"data\\Polishchuk_magistr.", MODE_READ);
+	std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 	switch (argc)
 	{
 	case 1:
@@ -63,7 +66,7 @@ int main(int argc, char* argv[]) {
 
 void usage(void)
 {
-	cout << "usage  : wav -<option> <argumets>\n" <<
+	std::cout << "usage  : wav -<option> <argumets>\n" <<
 			"Options:\n" <<
 			"-i     : wav file's information\n" <<
 			"-e     : hide binary file into wav file\n" <<
@@ -72,7 +75,7 @@ void usage(void)
 			"wav -i <wav_file>\n" <<
 			"wav -e <input_wav_file> <input_binary_file> <output_wav_file(optional)>\n" <<
 			"wav -d <input_wav_file>\n" <<
-	endl;
+	std::endl;
 }
 
 //function definition
@@ -96,7 +99,7 @@ int wavEncoderHandler(char* wavFilePath, char* wavBinaryPath, char* outFilePath)
 	if (wavFile.encryptFile(wavFilePath, wavBinaryPath, outFilePath) == -1)
 		return -1;
 
-	cout << "encoding done" << endl;
+	std::cout << "encoding done" << std::endl;
 	return 0;
 };
 
@@ -106,6 +109,6 @@ int wavDecoderHandler(char* wavFilePath)
 	if (wavFile.decryptFile(wavFilePath) == -1)
 		return -1;
 
-	cout << "decoding done" << endl;
+	std::cout << "decoding done" << std::endl;
 	return 0;
 };

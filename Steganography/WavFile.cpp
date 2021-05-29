@@ -1,20 +1,32 @@
 #include "header.hpp"
 #include "WavFile.hpp"
 #include "myFile.hpp"
+#include "logger.hpp"
 
 #ifndef __WavFile
 #define __WavFile
 #endif
 
 //class contructor
-WavFile::WavFile(const char* filename)
+WavFile::WavFile(const char* filePath): internalError(false)
 {
 	memset(&wavHeader, 0, sizeof(s_wavHeader));
 	memset(&myHeader, 0, sizeof(s_myHeader));
 
-	if (myFile::ifFileExist(filename))
+	if (!myFile::ifFileExist(filePath))
 	{
-		readWavHeader(filename);
+		char buff[100] = { 0 };
+
+        snprintf(buff, sizeof(buff), "Cannot create WavFile obj correctly. File \"%s\" doesn't exist", filePath);
+        LOG(LOG_ERR, buff);
+
+        internalError = true;
+	}
+	else if (readWavHeader(filePath) != WAV_SUCCESS)
+	{
+		LOG(LOG_ERR, "Cannot create WavFile obj correctly. Internal ERROR in readWavHeader()");
+
+		internalError = true;
 	}
 }
 
@@ -23,136 +35,169 @@ WavFile::~WavFile()
 	free(myHeader.name);
 }
 
-int WavFile::readWavHeader(const char* filename)
+int WavFile::readWavHeader(const char* wavFileName)
 {
 	int res = WAV_ERROR;
 
-	FILE* wavFilename = fopen(filename, "rb");
+	FILE* wavFile = fopen(wavFileName, "rb");
 
-	fread((char*)&(wavHeader.ChunkID), 4, 1, wavFilename);
-	fread((uint32_t*)&(wavHeader.ChunkSize), 4, 1, wavFilename);
-	fread((char*)&(wavHeader.Format), 4, 1, wavFilename);
-	fread((char*)&(wavHeader.Subchunk1ID), 4, 1, wavFilename);
-	fread((uint32_t*)&(wavHeader.Subchunk1Size), 4, 1, wavFilename);
-	fread((uint16_t*)&(wavHeader.AudioFormat), 2, 1, wavFilename);
-	fread((uint16_t*)&(wavHeader.NumChannels), 2, 1, wavFilename);
-	fread((uint32_t*)&(wavHeader.SampleRate), 4, 1, wavFilename);
-	fread((uint32_t*)&(wavHeader.ByteRate), 4, 1, wavFilename);
-	fread((uint16_t*)&(wavHeader.BlockAlign), 2, 1, wavFilename);
-	fread((uint16_t*)&(wavHeader.BitsPerSample), 2, 1, wavFilename);
-	fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
-	fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
+	if (fread((char*)&(wavHeader.ChunkID), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint32_t*)&(wavHeader.ChunkSize), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((char*)&(wavHeader.Format), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((char*)&(wavHeader.Subchunk1ID), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint32_t*)&(wavHeader.Subchunk1Size), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint16_t*)&(wavHeader.AudioFormat), 2, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint16_t*)&(wavHeader.NumChannels), 2, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint32_t*)&(wavHeader.SampleRate), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint32_t*)&(wavHeader.ByteRate), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint16_t*)&(wavHeader.BlockAlign), 2, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint16_t*)&(wavHeader.BitsPerSample), 2, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+	if (fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+
 	if (!strncmp(wavHeader.Subchunk2ID, "LIST", 4))
 	{
 		wavHeader.listSize = wavHeader.Subchunk2Size;
-		fseek(wavFilename, wavHeader.listSize, SEEK_CUR);
+		fseek(wavFile, wavHeader.listSize, SEEK_CUR);
 		wavHeader.listSize += 8; //adding lost SubChunkID and SubChunkSize size
 
-		fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFilename);
-		fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFilename);
+		if (fread((char*)&(wavHeader.Subchunk2ID), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+		if (fread((uint32_t*)&(wavHeader.Subchunk2Size), 4, 1, wavFile) != 1 || ferror(wavFile)) {LOG(LOG_WARN, "qwe"); goto error;};
+
 		if (strncmp(wavHeader.Subchunk2ID, "data", 4))
 		{
 			wavHeader.Subchunk2Size = 0;
-			std::cout << __FUNCTION__ << "(): " << __LINE__ << ": " << "Unknown DATA subchunk(" << wavHeader.Subchunk2ID << ")." << std::endl;
-			
+			char buff[100] = { 0 };
+
+			snprintf(buff, sizeof(buff), "Unknown DATA subchunk(%.4s)", wavHeader.Subchunk2ID);
+			LOG(LOG_ERR, buff);
+
+			internalError = true;
+
 			res = WAV_ERROR;
 		}
 	}
 
 	res = WAV_SUCCESS;
-	fclose(wavFilename);
+	fclose(wavFile);
 
-	return res; 
+	return res;
+
+error:
+	LOG(LOG_ERR, "InternalError while reading .wav header");
+	perror("WavFile::readWavHeader() ERROR");
+	internalError = true;
+	fclose(wavFile);
+
+	return WAV_ERROR;
 }
 
-int WavFile::printFileInfo()
+void WavFile::printFileInfo()
 {
-	cout << "RIFF             : " << wavHeader.ChunkID[0] << wavHeader.ChunkID[1] << wavHeader.ChunkID[2] << wavHeader.ChunkID[3] << endl;
-	cout << "Riff Chuck       : " << wavHeader.ChunkSize << endl;
-	cout << "Format           : " << wavHeader.Format[0] << wavHeader.Format[1] << wavHeader.Format[2] << wavHeader.Format[3] << endl;
-	cout << "Fmt              : " << wavHeader.Subchunk1ID[0] << wavHeader.Subchunk1ID[1] << wavHeader.Subchunk1ID[2] << wavHeader.Subchunk1ID[3] << endl;
-	cout << "Fmt chunk        : " << wavHeader.Subchunk1Size << endl;
-	cout << "Audio format(PCM): " << wavHeader.AudioFormat << endl;
-	cout << "Channels         : " << wavHeader.NumChannels << endl;
-	cout << "Sample Rate      : " << wavHeader.SampleRate << endl;
-	cout << "Bytes per sec    : " << wavHeader.ByteRate << endl;
-	cout << "Bytes block      : " << wavHeader.BlockAlign << endl;
-	cout << "Bits per sample  : " << wavHeader.BitsPerSample << endl;
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return;
+	}
+
+	std::cout << "RIFF             : " << wavHeader.ChunkID[0] << wavHeader.ChunkID[1] << wavHeader.ChunkID[2] << wavHeader.ChunkID[3] << std::endl;
+	std::cout << "Riff Chuck       : " << wavHeader.ChunkSize << std::endl;
+	std::cout << "Format           : " << wavHeader.Format[0] << wavHeader.Format[1] << wavHeader.Format[2] << wavHeader.Format[3] << std::endl;
+	std::cout << "Fmt              : " << wavHeader.Subchunk1ID[0] << wavHeader.Subchunk1ID[1] << wavHeader.Subchunk1ID[2] << wavHeader.Subchunk1ID[3] << std::endl;
+	std::cout << "Fmt chunk        : " << wavHeader.Subchunk1Size << std::endl;
+	std::cout << "Audio format(PCM): " << wavHeader.AudioFormat << std::endl;
+	std::cout << "Channels         : " << wavHeader.NumChannels << std::endl;
+	std::cout << "Sample Rate      : " << wavHeader.SampleRate << std::endl;
+	std::cout << "Bytes per sec    : " << wavHeader.ByteRate << std::endl;
+	std::cout << "Bytes block      : " << wavHeader.BlockAlign << std::endl;
+	std::cout << "Bits per sample  : " << wavHeader.BitsPerSample << std::endl;
 	if (!!wavHeader.listSize)
 	{
-		cout << "List chunk       : LIST" << std::endl;
-		cout << "Chunk size       : " << wavHeader.listSize << std::endl;
+		std::cout << "List chunk       : LIST" << std::endl;
+		std::cout << "Chunk size       : " << wavHeader.listSize << std::endl;
 	}
-	cout << "Data chuck       : " << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << endl;
-	cout << "Chunk size       : " << wavHeader.Subchunk2Size << endl;
+	std::cout << "Data chuck       : " << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << std::endl;
+	std::cout << "Chunk size       : " << wavHeader.Subchunk2Size << std::endl;
 
-	return 0;
 }
 
-int WavFile::checkFilesForHiding(char* parentfile, char* childfile)
+int WavFile::checkFilesForHiding(char* wavFilePath, char* binFilePath)
 {
-	FILE* tfile, * pfile;
-	unsigned long t = 0, p = 0;
-
-	// check and Initialize files...
-	// read txt file and read wav file length...
-	if (!myFile::ifFileExist(parentfile))
+	if (internalError)
 	{
-		throw("WAV file doesn't exist");
-		return -1;
+		LOG(LOG_ERR, "InternalError");
+		return WAV_ERROR;
 	}
 
-	if (!myFile::ifFileExist(childfile))
+	FILE* wavFile = NULL, * binFile = NULL;
+	uint32_t wavFileSize = 0, binFileSize = 0;
+
+	if (!myFile::ifFileExist(wavFilePath))
 	{
-		throw("txt file doesn't exist");
-		return -1;
+		char buff[100] = { 0 };
+
+        snprintf(buff, sizeof(buff), "File check failed. File \"%s\" doesn't exist", wavFilePath);
+        LOG(LOG_ERR, buff);
+
+        internalError = true;
+
+		return WAV_ERROR;
 	}
 
-	tfile = fopen(childfile, "rb");
-	while (!feof(tfile))					// read the length of txt file...
+	if (!myFile::ifFileExist(binFilePath))
 	{
-		fgetc(tfile);
-		t++;
-	}
-	fclose(tfile);
+		char buff[100] = { 0 };
 
-	pfile = fopen(parentfile, "rb");
-	while (!feof(pfile))					// read the length of wav file...
-	{
-		fgetc(pfile);
-		p++;
-	}
-	fclose(pfile);
+        snprintf(buff, sizeof(buff), "File check failed. File \"%s\" doesn't exist", binFilePath);
+        LOG(LOG_ERR, buff);
 
-	wavDataSize = p - WAV_HEADER_SIZE;
-	if (t > wavDataSize)
-	{
-		throw "TXT filesize is greater than WAVE file...";
-		return -1;
+        internalError = true;
+
+		return WAV_ERROR;
 	}
+
+	wavFileSize = myFile::getFileSize(wavFilePath);
+	binFileSize = myFile::getFileSize(binFilePath);
+
+	uint32_t minWavFileSize = 0;
+	
+	//minWavFileSize = 
 
 	return 0;
 }
 
 void WavFile::prepareHeader(char* childfile)
 {
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return;
+	}
+
 	myFile temp(childfile, MODE_READ);
 	
-	myHeader.fileSize = temp.size;
-	myHeader.nameSize = strlen(temp.name) + 1;
+	myHeader.fileSize = temp.getSize();
+	myHeader.nameSize = strlen(temp.getName()) + 1;
 	std::cout << __FUNCTION__ << "(): " << myHeader.nameSize << "|" << std::endl;
 	myHeader.name = (char *)malloc(myHeader.nameSize);
 	memset(myHeader.name, 0, myHeader.nameSize);
-	strcpy(myHeader.name, temp.name);
+	strcpy(myHeader.name, temp.getName());
 	std::cout << "|" << myHeader.name << "|" << std::endl;
 
-	// myHeader.headerSize = sizeof(myHeader.fileSize);
+	myHeader.headerSize = sizeof(myHeader.fileSize) + sizeof(myHeader.nameSize) + myHeader.nameSize;
 
 	std::cout << "fileSize: " << myHeader.fileSize << std::endl;
+	std::cout << "headerSize: " << myHeader.headerSize << std::endl;
 }
 
 void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 {
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return;
+	}
+
 	// temporary just to test enc/dec with header and size info
 	for (uint32_t i = 0; i < sizeof(uint32_t); i++)
 	{
@@ -173,6 +218,12 @@ void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 
 void WavFile::readHeader(FILE **parFile)
 {
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return;
+	}
+
 	uint32_t temp = 0;
 	
 	for (uint32_t i = 0; i < sizeof(uint32_t); i++)
@@ -199,6 +250,12 @@ void WavFile::readHeader(FILE **parFile)
 
 char WavFile::readHiddenByte(FILE **file)
 {
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return 0;
+	}
+
 	char byte = 0, temp = 0;
 
 	for (int i = 0; i < 8; i++, temp = 0)
@@ -217,6 +274,12 @@ char WavFile::readHiddenByte(FILE **file)
 
 void WavFile::hideByte(FILE **fileContainer, FILE **fileResult, char byte)
 {
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return;
+	}
+
 	char fileByte = 0;
 	for (int bit = 0; bit < 8; bit++)
 	{
@@ -233,6 +296,12 @@ void WavFile::hideByte(FILE **fileContainer, FILE **fileResult, char byte)
 
 int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePath)
 {
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return WAV_ERROR;
+	}
+
 	FILE *contFile = NULL, *binFile = NULL, *outFile = NULL;
 	unsigned char header[WAV_HEADER_SIZE];
 
@@ -250,7 +319,7 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 	fread(header, WAV_HEADER_SIZE, 1, contFile);		// read WAV header
 	fwrite(header, WAV_HEADER_SIZE, 1, outFile);		// write WAV header
 	
-	//for case of LIST presence. loop here, bcs I don't know length of LIST chunks
+	//for case of LIST presence
 	for (uint32_t i = 0; i < wavHeader.listSize; i++)
 	{
 		fputc(fgetc(contFile), outFile);
@@ -281,6 +350,12 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 
 int WavFile::decryptFile(char* encFilePath)
 {
+	if (internalError)
+	{
+		LOG(LOG_ERR, "InternalError");
+		return WAV_ERROR;
+	}
+
 	FILE *encFile = NULL, *tfile = NULL;
 
 	encFile = fopen(encFilePath, "rb");
