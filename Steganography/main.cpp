@@ -1,8 +1,7 @@
 #include "header.hpp"
 #include "WavFile.hpp"
 #include "myFile.hpp"
-
-// ImperialMarch60
+#include "logger.hpp"
 
 void usage(void);
 int wavInfoHandler(char *);

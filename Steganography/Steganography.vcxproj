@@ -145,6 +145,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header.hpp" />
+    <ClInclude Include="logger.hpp" />
     <ClInclude Include="myFile.hpp" />
     <ClInclude Include="WavFile.hpp" />
   </ItemGroup>
