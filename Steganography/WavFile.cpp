@@ -1,14 +1,11 @@
-#include "header.hpp"
+#include <iostream>
+#include <cstdlib>
+#include <cstring>
 #include "WavFile.hpp"
 #include "myFile.hpp"
 #include "logger.hpp"
 
-#ifndef __WavFile
-#define __WavFile
-#endif
-
-//class contructor
-WavFile::WavFile(const char* filePath): internalError(false)
+WavFile::WavFile(const char* filePath): internalError(false), possibleBytesToHideCount(0), step(0)
 {
 	memset(&wavHeader, 0, sizeof(s_wavHeader));
 	memset(&myHeader, 0, sizeof(s_myHeader));
@@ -156,14 +153,34 @@ int WavFile::checkFilesForHiding(char* wavFilePath, char* binFilePath)
 		return WAV_ERROR;
 	}
 
-	wavFileSize = myFile::getFileSize(wavFilePath);
+	prepareHeader(binFilePath);
+
 	binFileSize = myFile::getFileSize(binFilePath);
 
-	uint32_t minWavFileSize = 0;
-	
-	//minWavFileSize = 
+	possibleBytesToHideCount = (wavHeader.Subchunk2Size - (myHeader.headerSize * wavHeader.BitsPerSample)) /
+														wavHeader.BitsPerSample;
 
-	return 0;
+	if (possibleBytesToHideCount <= binFileSize)
+	{
+		char buff[100] = { 0 };
+
+        snprintf(buff, sizeof(buff), "Binary file's size is: (%d) bytes, but you can hide (%d) bytes", binFileSize, possibleBytesToHideCount);
+		LOG(LOG_WARN, "Binary file is too big to hide it into current .wav file");
+        LOG(LOG_WARN, buff);
+
+		internalError = true;
+		return WAV_ERROR;
+	}
+	
+	step = possibleBytesToHideCount / binFileSize;
+	
+	LOG(LOG_INF, wavHeader.Subchunk2Size);
+	LOG(LOG_INF, myHeader.headerSize);
+	LOG(LOG_INF, wavHeader.BitsPerSample);
+	LOG(LOG_INF, possibleBytesToHideCount);
+	LOG(LOG_INF, step);
+
+	return WAV_SUCCESS;
 }
 
 void WavFile::prepareHeader(char* childfile)
@@ -234,7 +251,7 @@ void WavFile::readHeader(FILE **parFile)
 	{
 		((char *)&(myHeader.nameSize))[i] = readHiddenByte(parFile);
 	}
-	
+
 	std::cout << __FUNCTION__ << "(): " << myHeader.nameSize << "|" << std::endl;
 
 	myHeader.name = (char *)malloc(myHeader.nameSize);
@@ -246,6 +263,25 @@ void WavFile::readHeader(FILE **parFile)
 	std::cout << "|" << myHeader.name << "|" << std::endl;
 
 	std::cout << "myHeader.fileSize dec: " << myHeader.fileSize << std::endl;
+
+	myHeader.headerSize = sizeof(myHeader.fileSize) + sizeof(myHeader.nameSize) + myHeader.nameSize;
+
+	possibleBytesToHideCount = (wavHeader.Subchunk2Size - (myHeader.headerSize * wavHeader.BitsPerSample)) /
+														wavHeader.BitsPerSample;
+
+	if (possibleBytesToHideCount <= myHeader.fileSize || !possibleBytesToHideCount || !myHeader.fileSize)
+	{
+		LOG(LOG_WARN, "InternalError. Something wrong with parameters");
+
+		internalError = true;
+	}
+	
+	step = possibleBytesToHideCount / myHeader.fileSize;
+	LOG(LOG_INF, wavHeader.Subchunk2Size);
+	LOG(LOG_INF, myHeader.headerSize);
+	LOG(LOG_INF, wavHeader.BitsPerSample);
+	LOG(LOG_INF, possibleBytesToHideCount);
+	LOG(LOG_INF, step);
 }
 
 char WavFile::readHiddenByte(FILE **file)
@@ -306,10 +342,10 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 	unsigned char header[WAV_HEADER_SIZE];
 
 	// check and Initialize parent & txt files...
-	if (checkFilesForHiding(contFilePath, binFilePath) == -1)
+	if (checkFilesForHiding(contFilePath, binFilePath) != WAV_SUCCESS)
 	{
-		throw ("error!, initialization failed...");
-		return -1;
+		LOG(LOG_ERR, "InternalError");
+		return WAV_ERROR;
 	}
 
 	contFile = fopen(contFilePath, "rb");
@@ -325,7 +361,6 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 		fputc(fgetc(contFile), outFile);
 	}
 
-	prepareHeader(binFilePath);
 	writeHeader(&contFile, &outFile);
 
 	// main hiding process
@@ -345,7 +380,7 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 	fclose(binFile);
 	fclose(outFile);
 
-	return 0;
+	return WAV_SUCCESS;
 }
 
 int WavFile::decryptFile(char* encFilePath)

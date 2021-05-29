@@ -42,8 +42,8 @@ private:
 	
 	bool internalError;
 	
-	//to be deleted
-	uint32_t wavDataSize;
+	uint32_t possibleBytesToHideCount;
+	uint32_t step;
 
 	char readHiddenByte(FILE **file);
 	void hideByte(FILE **fileContainer, FILE **fileResult, char byte);

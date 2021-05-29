@@ -10,16 +10,13 @@ int wavEncoderHandler(char *, char *, char *);
 int wavDecoderHandler(char *);
 
 int main(int argc, char* argv[]) {
-	// myFile q((char *)"data\\Polishchuk_magistr.pdf", MODE_READ);
-	// std::cout << q.getPath() << std::endl << q.getName() << std::endl << q.getExt() << std::endl;
-	// myFile w((char *)"data\\Polishchuk_magistr.", MODE_READ);
+
 	std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 	switch (argc)
 	{
 	case 1:
 	case 2:
 		usage();
-		// exit(0);
 		break;
 
 	case 3:
@@ -96,19 +93,25 @@ int wavEncoderHandler(char *wavFilePath, char *wavBinaryPath)
 int wavEncoderHandler(char* wavFilePath, char* wavBinaryPath, char* outFilePath)
 {
 	WavFile wavFile(wavFilePath);
-	if (wavFile.encryptFile(wavFilePath, wavBinaryPath, outFilePath) == -1)
+	if (wavFile.encryptFile(wavFilePath, wavBinaryPath, outFilePath) != WAV_SUCCESS)
+	{
+		LOG(LOG_WARN, "Encoding failed");
 		return -1;
+	}
 
-	std::cout << "encoding done" << std::endl;
+	LOG(LOG_INF, "Encoding done");
 	return 0;
 };
 
 int wavDecoderHandler(char* wavFilePath)
 {
 	WavFile wavFile(wavFilePath);
-	if (wavFile.decryptFile(wavFilePath) == -1)
+	if (wavFile.decryptFile(wavFilePath) != WAV_SUCCESS)
+	{
+		LOG(LOG_WARN, "Decoding failed");
 		return -1;
+	}
 
-	std::cout << "decoding done" << std::endl;
+	LOG(LOG_INF, "Decoding done");
 	return 0;
 };
