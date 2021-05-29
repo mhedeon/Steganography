@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include <stdbool.h>
+#include <string>
+#include "logger.hpp"
 
 enum Mode
 {
@@ -13,10 +15,12 @@ enum Mode
 
 class myFile
 {
+private:
+    bool internalError;
 public:
+    char *ext;
     char *name;
     char *path;
-    FILE *file;
     uint32_t size;
     
 
