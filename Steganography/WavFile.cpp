@@ -5,7 +5,7 @@
 #include "myFile.hpp"
 #include "logger.hpp"
 
-WavFile::WavFile(const char* filePath): internalError(false), possibleBytesToHideCount(0), step(0)
+WavFile::WavFile(const char* filePath, uint16_t key): internalError(false), possibleBytesToHideCount(0), step(0), lfsr(NULL)
 {
 	memset(&wavHeader, 0, sizeof(s_wavHeader));
 	memset(&myHeader, 0, sizeof(s_myHeader));
@@ -25,11 +25,14 @@ WavFile::WavFile(const char* filePath): internalError(false), possibleBytesToHid
 
 		internalError = true;
 	}
+	
+	lfsr = new LFSR(key);
 }
 
 WavFile::~WavFile()
 {
 	free(myHeader.name);
+	delete lfsr;
 }
 
 int WavFile::readWavHeader(const char* wavFileName)
@@ -297,6 +300,7 @@ char WavFile::readHiddenByte(FILE **file)
 	for (int i = 0; i < 8; i++, temp = 0)
 	{
 		temp = fgetc(*file);
+		temp = lfsr->getByte(temp);
 		byte |= ((temp & 0x1) << i);
 
 		for (int skipBytes = 0; skipBytes < wavHeader.BitsPerSample / 8 - 1; skipBytes++)
@@ -321,7 +325,7 @@ void WavFile::hideByte(FILE **fileContainer, FILE **fileResult, char byte)
 	{
 		fileByte = fgetc(*fileContainer);
 		fileByte = (fileByte & 0xFE) | ((char)((byte >> bit) & 1));
-		fputc(fileByte, *fileResult);
+		fputc(lfsr->getByte(fileByte), *fileResult);
 
 		for (int skipBytes = 0; skipBytes < wavHeader.BitsPerSample / 8 - 1; skipBytes++)
 		{

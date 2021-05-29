@@ -139,12 +139,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="lfsr.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="myFile.cpp" />
     <ClCompile Include="WavFile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header.hpp" />
+    <ClInclude Include="lfsr.hpp" />
     <ClInclude Include="logger.hpp" />
     <ClInclude Include="myFile.hpp" />
     <ClInclude Include="WavFile.hpp" />

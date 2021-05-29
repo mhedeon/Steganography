@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <stdbool.h>
+#include "lfsr.hpp"
 
 #define WAV_SUCCESS 0
 #define WAV_ERROR 1
@@ -44,6 +45,7 @@ private:
 	
 	uint32_t possibleBytesToHideCount;
 	uint32_t step;
+	LFSR *lfsr; // linear feedback shift register
 
 	char readHiddenByte(FILE **file);
 	void hideByte(FILE **fileContainer, FILE **fileResult, char byte);
@@ -53,7 +55,7 @@ private:
 	int readWavHeader(const char* filename);									// read WAVE Header
 	int checkFilesForHiding(char* parentfile, char* childfile);		// check files
 public:
-	WavFile(const char* filename);
+	WavFile(const char* filename, uint16_t key);
 	~WavFile();
 
 	void printFileInfo();											// print header variables

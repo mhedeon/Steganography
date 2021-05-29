@@ -24,6 +24,9 @@
     <ClCompile Include="myFile.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="lfsr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header.hpp">
@@ -36,6 +39,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="logger.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lfsr.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
