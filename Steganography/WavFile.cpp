@@ -7,6 +7,7 @@
 
 WavFile::WavFile(const char* filePath, uint16_t key): internalError(false), possibleBytesToHideCount(0), step(0), lfsr(NULL)
 {
+	LOG(LOG_INF, "Initialisation of wav file...");
 	memset(&wavHeader, 0, sizeof(s_wavHeader));
 	memset(&myHeader, 0, sizeof(s_myHeader));
 
@@ -25,8 +26,11 @@ WavFile::WavFile(const char* filePath, uint16_t key): internalError(false), poss
 
 		internalError = true;
 	}
-	
-	lfsr = new LFSR(key);
+	else
+	{
+		lfsr = new LFSR(key);
+		LOG(LOG_INF, "Initialisation of wav file done");
+	}
 }
 
 WavFile::~WavFile()
@@ -37,6 +41,7 @@ WavFile::~WavFile()
 
 int WavFile::readWavHeader(const char* wavFileName)
 {
+	LOG(LOG_INF, "Reading wav header...");
 	int res = WAV_ERROR;
 
 	FILE* wavFile = fopen(wavFileName, "rb");
@@ -80,6 +85,7 @@ int WavFile::readWavHeader(const char* wavFileName)
 
 	res = WAV_SUCCESS;
 	fclose(wavFile);
+	LOG(LOG_INF, "Reading wav header done");
 
 	return res;
 
@@ -118,11 +124,11 @@ void WavFile::printFileInfo()
 	}
 	std::cout << "Data chuck       : " << wavHeader.Subchunk2ID[0] << wavHeader.Subchunk2ID[1] << wavHeader.Subchunk2ID[2] << wavHeader.Subchunk2ID[3] << std::endl;
 	std::cout << "Chunk size       : " << wavHeader.Subchunk2Size << std::endl;
-
 }
 
 int WavFile::checkFilesForHiding(char* wavFilePath, char* binFilePath)
 {
+	LOG(LOG_INF, "Checking given files...");
 	if (internalError)
 	{
 		LOG(LOG_ERR, "InternalError");
@@ -176,18 +182,15 @@ int WavFile::checkFilesForHiding(char* wavFilePath, char* binFilePath)
 	}
 	
 	step = possibleBytesToHideCount / binFileSize;
-	
-	LOG(LOG_INF, wavHeader.Subchunk2Size);
-	LOG(LOG_INF, myHeader.headerSize);
-	LOG(LOG_INF, wavHeader.BitsPerSample);
-	LOG(LOG_INF, possibleBytesToHideCount);
-	LOG(LOG_INF, step);
+
+	LOG(LOG_INF, "Checking given files done");
 
 	return WAV_SUCCESS;
 }
 
 void WavFile::prepareHeader(char* childfile)
 {
+	LOG(LOG_INF, "Preparing additional header to hide...");
 	if (internalError)
 	{
 		LOG(LOG_ERR, "InternalError");
@@ -198,27 +201,25 @@ void WavFile::prepareHeader(char* childfile)
 	
 	myHeader.fileSize = temp.getSize();
 	myHeader.nameSize = strlen(temp.getName()) + 1;
-	std::cout << __FUNCTION__ << "(): " << myHeader.nameSize << "|" << std::endl;
+
 	myHeader.name = (char *)malloc(myHeader.nameSize);
 	memset(myHeader.name, 0, myHeader.nameSize);
 	strcpy(myHeader.name, temp.getName());
-	std::cout << "|" << myHeader.name << "|" << std::endl;
 
 	myHeader.headerSize = sizeof(myHeader.fileSize) + sizeof(myHeader.nameSize) + myHeader.nameSize;
 
-	std::cout << "fileSize: " << myHeader.fileSize << std::endl;
-	std::cout << "headerSize: " << myHeader.headerSize << std::endl;
+	LOG(LOG_INF, "Preparing additional header to hide done");
 }
 
 void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 {
+	LOG(LOG_INF, "Hiding additional header...");
 	if (internalError)
 	{
 		LOG(LOG_ERR, "InternalError");
 		return;
 	}
 
-	// temporary just to test enc/dec with header and size info
 	for (uint32_t i = 0; i < sizeof(uint32_t); i++)
 	{
 		char *headerByte = (char *)&(myHeader.fileSize) + i;
@@ -234,10 +235,13 @@ void WavFile::writeHeader(FILE **parFile, FILE **outFile)
 	{
 		hideByte(parFile, outFile, myHeader.name[i]);
 	}
+
+	LOG(LOG_INF, "Hiding additional header done");
 }
 
 void WavFile::readHeader(FILE **parFile)
 {
+	LOG(LOG_INF, "Reading additional header...");
 	if (internalError)
 	{
 		LOG(LOG_ERR, "InternalError");
@@ -255,17 +259,12 @@ void WavFile::readHeader(FILE **parFile)
 		((char *)&(myHeader.nameSize))[i] = readHiddenByte(parFile);
 	}
 
-	std::cout << __FUNCTION__ << "(): " << myHeader.nameSize << "|" << std::endl;
-
 	myHeader.name = (char *)malloc(myHeader.nameSize);
 	memset(myHeader.name, 0, myHeader.nameSize);
 	for (uint32_t i = 0; i < myHeader.nameSize; i++)
 	{
 		myHeader.name[i] = readHiddenByte(parFile);
 	}
-	std::cout << "|" << myHeader.name << "|" << std::endl;
-
-	std::cout << "myHeader.fileSize dec: " << myHeader.fileSize << std::endl;
 
 	myHeader.headerSize = sizeof(myHeader.fileSize) + sizeof(myHeader.nameSize) + myHeader.nameSize;
 
@@ -278,13 +277,10 @@ void WavFile::readHeader(FILE **parFile)
 
 		internalError = true;
 	}
-	
+
 	step = possibleBytesToHideCount / myHeader.fileSize;
-	LOG(LOG_INF, wavHeader.Subchunk2Size);
-	LOG(LOG_INF, myHeader.headerSize);
-	LOG(LOG_INF, wavHeader.BitsPerSample);
-	LOG(LOG_INF, possibleBytesToHideCount);
-	LOG(LOG_INF, step);
+
+	LOG(LOG_INF, "Reading additional header done");
 }
 
 char WavFile::readHiddenByte(FILE **file)
@@ -352,6 +348,8 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 		return WAV_ERROR;
 	}
 
+	LOG(LOG_INF, "Hiding binary file...");
+
 	contFile = fopen(contFilePath, "rb");
 	binFile = fopen(binFilePath, "rb");
 	outFile = fopen(outFilePath, "w+b");
@@ -391,6 +389,8 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 	fclose(binFile);
 	fclose(outFile);
 
+	LOG(LOG_INF, "Hiding binary file done");
+
 	return WAV_SUCCESS;
 }
 
@@ -401,6 +401,8 @@ int WavFile::decryptFile(char* encFilePath)
 		LOG(LOG_ERR, "InternalError");
 		return WAV_ERROR;
 	}
+
+	LOG(LOG_INF, "Revealing binary file...");
 
 	FILE *encFile = NULL, *binFile = NULL;
 
@@ -425,6 +427,8 @@ int WavFile::decryptFile(char* encFilePath)
 
 	fclose(encFile);
 	fclose(binFile);
+
+	LOG(LOG_INF, "Revealing binary file done");
 
 	return WAV_SUCCESS;
 }

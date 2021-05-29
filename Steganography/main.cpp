@@ -11,7 +11,6 @@ int wavDecoderHandler(char *, uint16_t);
 
 int main(int argc, char* argv[]) {
 
-	std::cout << "<<<<<<<<<<<<<<<<<<<<<<<<<" << std::endl;
 	switch (argc)
 	{
 	case 1:
