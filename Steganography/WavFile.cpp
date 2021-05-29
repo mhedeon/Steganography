@@ -367,6 +367,13 @@ int WavFile::encryptFile(char* contFilePath, char* binFilePath, char* outFilePat
 	while (!feof(binFile))
 	{
 		hideByte(&contFile, &outFile, fgetc(binFile));
+		if (!feof(binFile))
+		{
+			for (uint32_t skipByte = 0; skipByte < step * (wavHeader.BitsPerSample / 8); skipByte++)
+			{
+				fputc(fgetc(contFile), outFile);
+			}
+		}
 	}
 
 	// write remaing wav bytes into the new file.
@@ -391,7 +398,7 @@ int WavFile::decryptFile(char* encFilePath)
 		return WAV_ERROR;
 	}
 
-	FILE *encFile = NULL, *tfile = NULL;
+	FILE *encFile = NULL, *binFile = NULL;
 
 	encFile = fopen(encFilePath, "rb");
 
@@ -399,16 +406,21 @@ int WavFile::decryptFile(char* encFilePath)
 	fseek(encFile, WAV_HEADER_SIZE + wavHeader.listSize, SEEK_SET);
 
 	readHeader(&encFile);
-	tfile = fopen(myHeader.name, "w+b");
+	binFile = fopen(myHeader.name, "w+b");
 
 	uint32_t i = 0;
 	while (!feof(encFile) && i < myHeader.fileSize)
 	{
-		fputc(readHiddenByte(&encFile), tfile);
+		fputc(readHiddenByte(&encFile), binFile);
 		i++;
+		for (uint32_t skipByte = 0; skipByte < step * (wavHeader.BitsPerSample / 8); skipByte++)
+		{
+			fgetc(encFile);
+		}
 	}
 
 	fclose(encFile);
-	fclose(tfile);
-	return 0;
+	fclose(binFile);
+
+	return WAV_SUCCESS;
 }
