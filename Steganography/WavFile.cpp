@@ -162,6 +162,60 @@ int WavFile::checkFilesForHiding(char* wavFilePath, char* binFilePath)
 		return WAV_ERROR;
 	}
 
+	if (strncmp(wavHeader.ChunkID, "RIFF", 4))
+	{
+		LOG(LOG_ERR, "Unknown ChunkID");
+
+		internalError = true;
+
+		return WAV_ERROR;
+	}
+
+	if (strncmp(wavHeader.Format, "WAVE", 4))
+	{
+		LOG(LOG_ERR, "Unknown Format");
+
+		internalError = true;
+
+		return WAV_ERROR;
+	}
+
+	if (strncmp(wavHeader.Subchunk1ID, "fmt ", 4))
+	{
+		LOG(LOG_ERR, "Unknown Subchunk1ID");
+
+		internalError = true;
+
+		return WAV_ERROR;
+	}
+
+	if (wavHeader.Subchunk1Size != 16)
+	{
+		LOG(LOG_ERR, "Unknown Subchunk1Size");
+
+		internalError = true;
+
+		return WAV_ERROR;
+	}
+
+	if (wavHeader.AudioFormat != 1)
+	{
+		LOG(LOG_ERR, "Unknown AudioFormat");
+
+		internalError = true;
+
+		return WAV_ERROR;
+	}
+
+	if (strncmp(wavHeader.Subchunk2ID, "data", 4))
+	{
+		LOG(LOG_ERR, "Unknown Subchunk2ID");
+
+		internalError = true;
+
+		return WAV_ERROR;
+	}
+
 	prepareHeader(binFilePath);
 
 	binFileSize = myFile::getFileSize(binFilePath);
@@ -181,7 +235,7 @@ int WavFile::checkFilesForHiding(char* wavFilePath, char* binFilePath)
 		return WAV_ERROR;
 	}
 	
-	step = possibleBytesToHideCount / binFileSize;
+	step = possibleBytesToHideCount / (binFileSize + myHeader.headerSize);
 
 	LOG(LOG_INF, "Checking given files done");
 
@@ -278,7 +332,7 @@ void WavFile::readHeader(FILE **parFile)
 		internalError = true;
 	}
 
-	step = possibleBytesToHideCount / myHeader.fileSize;
+	step = possibleBytesToHideCount / (myHeader.fileSize + myHeader.headerSize);
 
 	LOG(LOG_INF, "Reading additional header done");
 }
